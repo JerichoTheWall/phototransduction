@@ -1,336 +1,381 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photon Quest v1.1: Phototransduction Game</title>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        #gameCanvas {
-            border: 2px solid #333;
-            max-width: 100%;
-            max-height: 100%;
-            touch-action: none;
-            display: none; /* Hidden until game starts */
-        }
-        #menu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        #menu button {
-            display: block;
-            margin: 10px auto;
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 16px;
-            color: #000;
-        }
-        #message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            max-width: 80%;
-            font-size: 14px;
-            display: none;
-        }
-        #restart {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            display: none;
-        }
-        #instructions {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: left;
-            max-width: 80%;
-        }
-        #instructions button {
-            margin-top: 10px;
-            padding: 5px 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photon Quest v1.2: Phototransduction Game</title>
+<style>
+    body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f0f0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+    }
+    #gameCanvas {
+        border: 2px solid #333;
+        max-width: 100%;
+        max-height: 100%;
+        touch-action: none;
+        display: none;
+    }
+    #menu, #instructions, #message, #restart, #score, #healthDisplay {
+        position: absolute;
+        text-align: center;
+    }
+    #menu {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #menu button, #instructions button, #restart {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    #instructions {
+        display: none;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        max-width: 80%;
+        text-align: left;
+    }
+    #score { top: 10px; left: 10px; font-size: 16px; color: #000; }
+    #healthDisplay { top: 10px; right: 10px; font-size: 16px; color: green; }
+    #message {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        max-width: 80%;
+        font-size: 14px;
+        display: none;
+    }
+</style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="300" height="500"></canvas>
-    <div id="menu">
-        <h2>Photon Quest v1.1</h2>
-        <button onclick="startGame()">Start Game</button>
-        <button onclick="showInstructions()">Instructions</button>
-        <button onclick="window.close()">Quit</button>
-    </div>
-    <div id="instructions">
-        <h3>Instructions</h3>
-        <p>Guide the photon through the retina's phototransduction pathway!</p>
-        <ul>
-            <li>Tap the left side of the screen to move the photon left.</li>
-            <li>Tap the right side to move the photon right.</li>
-            <li>Hit green targets (e.g., Rhodopsin) in order to progress.</li>
-            <li>Avoid red obstacles to prevent losing points.</li>
-            <li>Complete all 5 levels to win!</li>
-        </ul>
-        <button onclick="hideInstructions()">Back</button>
-    </div>
-    <div id="score">Score: 0</div>
-    <div id="message"></div>
-    <button id="restart" onclick="restartGame()">Restart</button>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score');
-        const messageDisplay = document.getElementById('message');
-        const restartButton = document.getElementById('restart');
-        const menu = document.getElementById('menu');
-        const instructions = document.getElementById('instructions');
+<canvas id="gameCanvas" width="300" height="500"></canvas>
 
-        let score = 0;
-        let gameOver = false;
-        let level = 1;
-        let photon = { x: 150, y: 450, radius: 10, speed: 5 };
-        let targets = [];
-        let obstacles = [];
-        let lastTime = 0;
+<div id="menu">
+    <h2>Photon Quest v1.2</h2>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="showInstructions()">Instructions</button>
+    <button onclick="window.close()">Quit</button>
+</div>
 
-        const levels = [
-            { name: "Hit Rhodopsin", target: "Rhodopsin", message: "Photon hits rhodopsin! It changes shape to activate." },
-            { name: "Activate Transducin", target: "Transducin", message: "Rhodopsin activates transducin, a G-protein!" },
-            { name: "Activate PDE", target: "PDE", message: "Transducin activates phosphodiesterase (PDE)!" },
-            { name: "Break cGMP", target: "cGMP", message: "PDE breaks down cGMP, closing ion channels!" },
-            { name: "Signal to Brain", target: "Signal", message: "Ion channels close, sending signal to the brain!" }
-        ];
+<div id="instructions">
+    <h3>Instructions</h3>
+    <p>Guide the photon through the retina's phototransduction pathway!</p>
+    <ul>
+        <li>Tap left side to move photon left, right side to move right.</li>
+        <li>Hit green Targets in order to progress.</li>
+        <li>Avoid red Obstacles! They reduce your health.</li>
+        <li>Rare falling herbs restore 1 health.</li>
+        <li>Complete 20 Targets to win!</li>
+    </ul>
+    <button onclick="hideInstructions()">Back</button>
+</div>
 
-        function startGame() {
-            menu.style.display = 'none';
-            canvas.style.display = 'block';
-            score = 0;
-            level = 1;
-            gameOver = false;
-            targets = [];
-            obstacles = [];
-            photon.x = 150;
-            scoreDisplay.textContent = `Score: ${score}`;
+<div id="score">Score: 0</div>
+<div id="healthDisplay">HP: 3</div>
+<div id="message"></div>
+<button id="restart" onclick="restartGame()">Restart</button>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const scoreDisplay = document.getElementById('score');
+const healthDisplay = document.getElementById('healthDisplay');
+const messageDisplay = document.getElementById('message');
+const restartButton = document.getElementById('restart');
+const menu = document.getElementById('menu');
+const instructions = document.getElementById('instructions');
+
+let score = 0;
+let health = 3;
+let gameOver = false;
+let level = 1;
+let targetsHit = 0;
+const totalTargets = 20;
+let photon = { x: 150, y: 450, radius: 10, speed: 5 };
+let targets = [];
+let obstacles = [];
+let healthItems = [];
+let lastTime = 0;
+let backgroundAlpha = 0;
+
+// Load images
+const bgImage = new Image();
+bgImage.src = 'background.jpg';
+const herbImage = new Image();
+herbImage.src = 'herb.jpg';
+
+// Load sounds
+const hitSound = new Audio('hit.mp3');
+const badSound = new Audio('bad.mp3');
+
+// Levels with messages
+const levels = [
+    { name: "Hit Rhodopsin", target: "Rhodopsin", message: "Photon hits rhodopsin! It changes shape to activate." },
+    { name: "Activate Transducin", target: "Transducin", message: "Rhodopsin activates transducin, a G-protein!" },
+    { name: "Activate PDE", target: "PDE", message: "Transducin activates phosphodiesterase (PDE)!" },
+    { name: "Break cGMP", target: "cGMP", message: "PDE breaks down cGMP, closing ion channels!" },
+    { name: "Signal to Brain", target: "Signal", message: "Ion channels close, sending signal to the brain!" }
+];
+
+function startGame() {
+    menu.style.display = 'none';
+    canvas.style.display = 'block';
+    score = 0;
+    health = 3;
+    targetsHit = 0;
+    level = 1;
+    gameOver = false;
+    targets = [];
+    obstacles = [];
+    healthItems = [];
+    photon.x = 150;
+    backgroundAlpha = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    healthDisplay.textContent = `HP: ${health}`;
+    spawnTarget();
+    setInterval(spawnObstacle, 1500);
+    setInterval(spawnHealthItem, 10000); // rare
+    requestAnimationFrame(gameLoop);
+}
+
+function showInstructions() {
+    menu.style.display = 'none';
+    instructions.style.display = 'block';
+}
+function hideInstructions() {
+    instructions.style.display = 'none';
+    menu.style.display = 'block';
+}
+
+function spawnTarget() {
+    const target = {
+        x: Math.random() * (canvas.width - 60) + 30,
+        y: 0,
+        width: 60,
+        height: 30,
+        type: levels[level - 1].target,
+        speed: 1 + Math.random() * 2
+    };
+    targets.push(target);
+}
+
+function spawnObstacle() {
+    if (gameOver) return;
+    const obstacle = {
+        x: Math.random() * (canvas.width - 60) + 30,
+        y: 0,
+        width: 60,
+        height: 30,
+        speed: 1 + Math.random() * 2
+    };
+    obstacles.push(obstacle);
+}
+
+function spawnHealthItem() {
+    if (gameOver) return;
+    const herb = {
+        x: Math.random() * (canvas.width - 30),
+        y: 0,
+        width: 30,
+        height: 30,
+        speed: 1.5
+    };
+    healthItems.push(herb);
+}
+
+function handleTouch(event) {
+    if (gameOver) return;
+    event.preventDefault();
+    const touchX = event.touches[0].clientX - canvas.offsetLeft;
+    if (touchX < canvas.width / 2) photon.x = Math.max(photon.radius, photon.x - photon.speed * 10);
+    else photon.x = Math.min(canvas.width - photon.radius, photon.x + photon.speed * 10);
+}
+
+function showMessage(text) {
+    messageDisplay.textContent = text;
+    messageDisplay.style.display = 'block';
+    setTimeout(() => { messageDisplay.style.display = 'none'; }, 2000);
+}
+
+function gameLoop(timestamp) {
+    if (gameOver) return;
+    const deltaTime = (timestamp - lastTime) / 16.67;
+    lastTime = timestamp;
+
+    updateTargets(deltaTime);
+    updateObstacles(deltaTime);
+    updateHealthItems(deltaTime);
+    checkCollisions();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function updateTargets(dt) {
+    targets.forEach((t, i) => {
+        t.y += t.speed * dt;
+        if (t.y > canvas.height) {
+            targets.splice(i, 1);
             spawnTarget();
-            setInterval(spawnObstacle, 2000);
-            requestAnimationFrame(gameLoop);
         }
+    });
+}
 
-        function showInstructions() {
-            menu.style.display = 'none';
-            instructions.style.display = 'block';
-        }
+function updateObstacles(dt) {
+    obstacles.forEach((o, i) => {
+        o.y += o.speed * dt;
+        if (o.y > canvas.height) obstacles.splice(i, 1);
+    });
+}
 
-        function hideInstructions() {
-            instructions.style.display = 'none';
-            menu.style.display = 'block';
-        }
+function updateHealthItems(dt) {
+    healthItems.forEach((h, i) => {
+        h.y += h.speed * dt;
+        if (h.y > canvas.height) healthItems.splice(i, 1);
+    });
+}
 
-        function spawnTarget() {
-            const target = {
-                x: Math.random() * (canvas.width - 60) + 30,
-                y: 0,
-                width: 60,
-                height: 30,
-                type: levels[level - 1].target,
-                speed: 2
-            };
-            targets.push(target);
-        }
-
-        function spawnObstacle() {
-            if (gameOver) return;
-            const obstacle = {
-                x: Math.random() * (canvas.width - 60) + 30,
-                y: 0,
-                width: 60,
-                height: 30,
-                type: "Obstacle",
-                speed: 2
-            };
-            obstacles.push(obstacle);
-        }
-
-        function handleTouch(event) {
-            if (gameOver) return;
-            event.preventDefault();
-            const touchX = event.touches[0].clientX - canvas.offsetLeft;
-            if (touchX < canvas.width / 2) {
-                photon.x = Math.max(photon.radius, photon.x - photon.speed * 10);
-            } else {
-                photon.x = Math.min(canvas.width - photon.radius, photon.x + photon.speed * 10);
+function checkCollisions() {
+    targets.forEach((t, i) => {
+        if (photon.x + photon.radius > t.x &&
+            photon.x - photon.radius < t.x + t.width &&
+            photon.y + photon.radius > t.y &&
+            photon.y - photon.radius < t.y + t.height) {
+            score += 10;
+            targetsHit++;
+            scoreDisplay.textContent = `Score: ${score}`;
+            hitSound.play();
+            showMessage(levels[level - 1].message);
+            backgroundAlpha = Math.min(1, backgroundAlpha + 0.05); // slowly reveal bg
+            targets.splice(i, 1);
+            spawnTarget();
+            level = (level % levels.length) + 1;
+            if (targetsHit >= totalTargets) {
+                gameOver = true;
+                showMessage("You completed phototransduction! Signal sent to brain!");
+                restartButton.style.display = 'block';
             }
         }
+    });
 
-        function showMessage(text) {
-            messageDisplay.textContent = text;
-            messageDisplay.style.display = 'block';
-            setTimeout(() => {
-                messageDisplay.style.display = 'none';
-            }, 2000);
+    obstacles.forEach((o, i) => {
+        if (photon.x + photon.radius > o.x &&
+            photon.x - photon.radius < o.x + o.width &&
+            photon.y + photon.radius > o.y &&
+            photon.y - photon.radius < o.y + o.height) {
+            health--;
+            badSound.play();
+            healthDisplay.textContent = `HP: ${health}`;
+            showMessage("Ouch! Hit an obstacle!");
+            backgroundAlpha = Math.max(0, backgroundAlpha - 0.05); // damage bg
+            obstacles.splice(i, 1);
+            if (health <= 0) {
+                gameOver = true;
+                showMessage("Game Over! Photon destroyed!");
+                restartButton.style.display = 'block';
+            }
         }
+    });
 
-        function gameLoop(timestamp) {
-            if (gameOver) return;
-
-            const deltaTime = (timestamp - lastTime) / 16.67;
-            lastTime = timestamp;
-
-            updateTargets(deltaTime);
-            updateObstacles(deltaTime);
-            checkCollisions();
-
-            draw();
-
-            requestAnimationFrame(gameLoop);
+    healthItems.forEach((h, i) => {
+        if (photon.x + photon.radius > h.x &&
+            photon.x - photon.radius < h.x + h.width &&
+            photon.y + photon.radius > h.y &&
+            photon.y - photon.radius < h.y + h.height) {
+            health = Math.min(3, health + 1);
+            healthDisplay.textContent = `HP: ${health}`;
+            hitSound.play();
+            showMessage("Health Restored!");
+            healthItems.splice(i, 1);
         }
+    });
+}
 
-        function updateTargets(deltaTime) {
-            targets.forEach((target, index) => {
-                target.y += target.speed * deltaTime;
-                if (target.y > canvas.height) {
-                    targets.splice(index, 1);
-                    spawnTarget();
-                }
-            });
-        }
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        function updateObstacles(deltaTime) {
-            obstacles.forEach((obstacle, index) => {
-                obstacle.y += obstacle.speed * deltaTime;
-                if (obstacle.y > canvas.height) {
-                    obstacles.splice(index, 1);
-                }
-            });
-        }
+    // Draw slowly revealed/damaged background
+    ctx.globalAlpha = backgroundAlpha;
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
 
-        function checkCollisions() {
-            targets.forEach((target, index) => {
-                if (
-                    photon.x + photon.radius > target.x &&
-                    photon.x - photon.radius < target.x + target.width &&
-                    photon.y + photon.radius > target.y &&
-                    photon.y - photon.radius < target.y + target.height
-                ) {
-                    score += 10;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    showMessage(levels[level - 1].message);
-                    targets.splice(index, 1);
-                    level++;
-                    if (level > levels.length) {
-                        gameOver = true;
-                        showMessage("You completed phototransduction! Signal sent to brain!");
-                        restartButton.style.display = 'block';
-                    } else {
-                        spawnTarget();
-                    }
-                }
-            });
+    // Draw photon
+    ctx.fillStyle = 'yellow';
+    ctx.beginPath();
+    ctx.arc(photon.x, photon.y, photon.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'black';
+    ctx.font = '10px Arial';
+    ctx.fillText("Photon", photon.x - 15, photon.y - 10);
 
-            obstacles.forEach((obstacle, index) => {
-                if (
-                    photon.x + photon.radius > obstacle.x &&
-                    photon.x - photon.radius < obstacle.x + obstacle.width &&
-                    photon.y + photon.radius > obstacle.y &&
-                    photon.y - photon.radius < obstacle.y + obstacle.height
-                ) {
-                    score -= 5;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    obstacles.splice(index, 1);
-                    showMessage("Ouch! Hit an inactive molecule!");
-                    if (score < 0) {
-                        gameOver = true;
-                        showMessage("Game Over! Too many obstacles hit!");
-                        restartButton.style.display = 'block';
-                    }
-                }
-            });
-        }
+    // Draw targets
+    targets.forEach(t => {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(t.x, t.y, t.width, t.height);
+        ctx.fillStyle = 'black';
+        ctx.fillText(t.type, t.x, t.y + 20);
+    });
 
-        function draw() {
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Draw obstacles
+    obstacles.forEach(o => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(o.x, o.y, o.width, o.height);
+        ctx.fillStyle = 'black';
+        ctx.fillText("Obstacle", o.x, o.y + 20);
+    });
 
-            ctx.fillStyle = 'yellow';
-            ctx.beginPath();
-            ctx.arc(photon.x, photon.y, photon.radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.font = '10px Arial';
-            ctx.fillText("Photon", photon.x - 15, photon.y - 10);
+    // Draw health items
+    healthItems.forEach(h => {
+        ctx.drawImage(herbImage, h.x, h.y, h.width, h.height);
+    });
 
-            targets.forEach(target => {
-                ctx.fillStyle = 'green';
-                ctx.fillRect(target.x, target.y, target.width, target.height);
-                ctx.fillStyle = 'black';
-                ctx.font = '10px Arial';
-                ctx.fillText(target.type, target.x, target.y + 20);
-            });
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.fillText(`Level ${level}: ${levels[level - 1].name}`, 10, 30);
+}
 
-            obstacles.forEach(obstacle => {
-                ctx.fillStyle = 'red';
-                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-                ctx.fillStyle = 'black';
-                ctx.font = '10px Arial';
-                ctx.fillText("Obstacle", obstacle.x, obstacle.y + 20);
-            });
+function restartGame() {
+    score = 0;
+    health = 3;
+    targetsHit = 0;
+    level = 1;
+    gameOver = false;
+    targets = [];
+    obstacles = [];
+    healthItems = [];
+    photon.x = 150;
+    backgroundAlpha = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    healthDisplay.textContent = `HP: ${health}`;
+    restartButton.style.display = 'none';
+    spawnTarget();
+    requestAnimationFrame(gameLoop);
+}
 
-            ctx.fillStyle = 'black';
-            ctx.font = '16px Arial';
-            ctx.fillText(`Level ${level}: ${levels[level - 1].name}`, 10, 30);
-        }
-
-        function restartGame() {
-            score = 0;
-            level = 1;
-            gameOver = false;
-            targets = [];
-            obstacles = [];
-            photon.x = 150;
-            scoreDisplay.textContent = `Score: ${score}`;
-            restartButton.style.display = 'none';
-            spawnTarget();
-            requestAnimationFrame(gameLoop);
-        }
-
-        canvas.addEventListener('touchstart', handleTouch);
-    </script>
+canvas.addEventListener('touchstart', handleTouch);
+</script>
 </body>
 </html>
