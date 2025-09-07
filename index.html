@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photon Quest: Phototransduction Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none; /* Prevents default touch behaviors */
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            color: #000;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            max-width: 80%;
+            font-size: 16px;
+            display: none;
+        }
+        #restart {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="message"></div>
+    <button id="restart" onclick="restartGame()">Restart</button>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const messageDisplay = document.getElementById('message');
+        const restartButton = document.getElementById('restart');
+
+        // Game state
+        let score = 0;
+        let gameOver = false;
+        let level = 1;
+        let photon = { x: 200, y: 500, radius: 10, speed: 5 };
+        let targets = [];
+        let obstacles = [];
+        let lastTime = 0;
+
+        // Phototransduction steps (levels)
+        const levels = [
+            { name: "Hit Rhodopsin", target: "Rhodopsin", message: "Photon hits rhodopsin! It changes shape to activate." },
+            { name: "Activate Transducin", target: "Transducin", message: "Rhodopsin activates transducin, a G-protein!" },
+            { name: "Activate PDE", target: "PDE", message: "Transducin activates phosphodiesterase (PDE)!" },
+            { name: "Break cGMP", target: "cGMP", message: "PDE breaks down cGMP, closing ion channels!" },
+            { name: "Signal to Brain", target: "Signal", message: "Ion channels close, sending signal to the brain!" }
+        ];
+
+        // Initialize game
+        function init() {
+            // Spawn initial target
+            spawnTarget();
+            // Spawn obstacles periodically
+            setInterval(spawnObstacle, 2000);
+            // Handle touch controls
+            canvas.addEventListener('touchstart', handleTouch);
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Spawn a target (e.g., Rhodopsin, Transducin)
+        function spawnTarget() {
+            const target = {
+                x: Math.random() * (canvas.width - 60) + 30,
+                y: 0,
+                width: 60,
+                height: 30,
+                type: levels[level - 1].target,
+                speed: 2
+            };
+            targets.push(target);
+        }
+
+        // Spawn an obstacle (inactive molecule)
+        function spawnObstacle() {
+            if (gameOver) return;
+            const obstacle = {
+                x: Math.random() * (canvas.width - 60) + 30,
+                y: 0,
+                width: 60,
+                height: 30,
+                type: "Obstacle",
+                speed: 2
+            };
+            obstacles.push(obstacle);
+        }
+
+        // Handle touch input (left/right tap)
+        function handleTouch(event) {
+            if (gameOver) return;
+            event.preventDefault();
+            const touchX = event.touches[0].clientX - canvas.offsetLeft;
+            if (touchX < canvas.width / 2) {
+                photon.x = Math.max(photon.radius, photon.x - photon.speed * 10);
+            } else {
+                photon.x = Math.min(canvas.width - photon.radius, photon.x + photon.speed * 10);
+            }
+        }
+
+        // Display educational message
+        function showMessage(text) {
+            messageDisplay.textContent = text;
+            messageDisplay.style.display = 'block';
+            setTimeout(() => {
+                messageDisplay.style.display = 'none';
+            }, 2000);
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (gameOver) return;
+
+            const deltaTime = (timestamp - lastTime) / 16.67; // Normalize to 60fps
+            lastTime = timestamp;
+
+            // Update
+            updateTargets(deltaTime);
+            updateObstacles(deltaTime);
+            checkCollisions();
+
+            // Draw
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update targets
+        function updateTargets(deltaTime) {
+            targets.forEach((target, index) => {
+                target.y += target.speed * deltaTime;
+                if (target.y > canvas.height) {
+                    targets.splice(index, 1);
+                    spawnTarget();
+                }
+            });
+        }
+
+        // Update obstacles
+        function updateObstacles(deltaTime) {
+            obstacles.forEach((obstacle, index) => {
+                obstacle.y += obstacle.speed * deltaTime;
+                if (obstacle.y > canvas.height) {
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
+
+        // Check collisions
+        function checkCollisions() {
+            // Check target collisions
+            targets.forEach((target, index) => {
+                if (
+                    photon.x + photon.radius > target.x &&
+                    photon.x - photon.radius < target.x + target.width &&
+                    photon.y + photon.radius > target.y &&
+                    photon.y - photon.radius < target.y + target.height
+                ) {
+                    score += 10;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    showMessage(levels[level - 1].message);
+                    targets.splice(index, 1);
+                    level++;
+                    if (level > levels.length) {
+                        gameOver = true;
+                        showMessage("You completed phototransduction! Signal sent to brain!");
+                        restartButton.style.display = 'block';
+                    } else {
+                        spawnTarget();
+                    }
+                }
+            });
+
+            // Check obstacle collisions
+            obstacles.forEach((obstacle, index) => {
+                if (
+                    photon.x + photon.radius > obstacle.x &&
+                    photon.x - photon.radius < obstacle.x + obstacle.width &&
+                    photon.y + photon.radius > obstacle.y &&
+                    photon.y - photon.radius < obstacle.y + obstacle.height
+                ) {
+                    score -= 5;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    obstacles.splice(index, 1);
+                    showMessage("Ouch! Hit an inactive molecule!");
+                    if (score < 0) {
+                        gameOver = true;
+                        showMessage("Game Over! Too many obstacles hit!");
+                        restartButton.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        // Draw everything
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw photon
+            ctx.fillStyle = 'yellow';
+            ctx.beginPath();
+            ctx.arc(photon.x, photon.y, photon.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.font = '12px Arial';
+            ctx.fillText("Photon", photon.x - 20, photon.y - 10);
+
+            // Draw targets
+            targets.forEach(target => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(target.x, target.y, target.width, target.height);
+                ctx.fillStyle = 'black';
+                ctx.font = '12px Arial';
+                ctx.fillText(target.type, target.x, target.y + 20);
+            });
+
+            // Draw obstacles
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                ctx.fillStyle = 'black';
+                ctx.font = '12px Arial';
+                ctx.fillText("Obstacle", obstacle.x, obstacle.y + 20);
+            });
+
+            // Draw level
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Level ${level}: ${levels[level - 1].name}`, 10, 50);
+        }
+
+        // Restart game
+        function restartGame() {
+            score = 0;
+            level = 1;
+            gameOver = false;
+            targets = [];
+            obstacles = [];
+            photon.x = 200;
+            scoreDisplay.textContent = `Score: ${score}`;
+            restartButton.style.display = 'none';
+            spawnTarget();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
